@@ -166,6 +166,87 @@
 
     @media print { header, nav, footer, button { display: none; } }
   </style>
+
+  <!-- Separate styles ONLY for the bottom Admin Feed Panel -->
+  <style>
+    #adminFeedPanel {
+      border: 2px solid var(--green);
+      background: #ffffff;
+      margin-top: 24px;
+    }
+    .afp-login-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .afp-login-bar input {
+      width: 170px;
+    }
+    .afp-topbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+    }
+    .afp-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .afp-controls select {
+      width: auto;
+      min-width: 200px;
+    }
+    .afp-survey-box {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      margin-bottom: 16px;
+      background: #fafdfb;
+    }
+    .afp-survey-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    .afp-stepper {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .afp-feeding-card {
+      border: 1px solid #9dbab0;
+      border-left: 4px solid var(--green);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 12px;
+      background: #ffffff;
+    }
+    .afp-feeding-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      padding: 6px 10px;
+      background: var(--green-light);
+      border-radius: 4px;
+    }
+  </style>
 </head>
 
 <body>
@@ -331,6 +412,45 @@
       </ul>
       <h3>Demo staff PIN (for project evaluation)</h3>
       <p>The PIN is <strong>1234</strong>.</p>
+    </section>
+
+    <!-- ===================== SEPARATE BOTTOM PANEL: ADMIN SURVEY FEEDING VIEWER ===================== -->
+    <section id="adminFeedPanel">
+      <div id="afpLockedView">
+        <h2>Admin Survey &amp; Feeding Panel</h2>
+        <p class="hint">Restricted access: only the authorized admin can log in here to inspect all surveys and one-by-one feeding details.</p>
+        <form id="afpLoginForm" class="afp-login-bar">
+          <label class="inline" for="afpPin">Admin PIN:</label>
+          <input type="password" id="afpPin" placeholder="Enter Admin PIN" autocomplete="off">
+          <button type="submit">Login</button>
+          <span id="afpLoginMsg" class="error"></span>
+        </form>
+      </div>
+
+      <div id="afpUnlockedView" hidden>
+        <div class="afp-topbar">
+          <div>
+            <h2 style="margin-bottom:2px;">Admin Survey &amp; Feeding Panel (All Surveys)</h2>
+            <p class="hint">Showing every survey and each feeding submission one by one in full detail.</p>
+          </div>
+          <button type="button" id="afpLogoutBtn" class="secondary">Logout Admin Panel</button>
+        </div>
+
+        <div id="afpStats" class="stats"></div>
+
+        <div class="afp-controls">
+          <label class="inline" for="afpSurveyFilter"><strong>Filter Survey:</strong></label>
+          <select id="afpSurveyFilter"></select>
+
+          <label class="inline" for="afpModeSelect"><strong>Display Mode:</strong></label>
+          <select id="afpModeSelect">
+            <option value="one">One-by-One (Prev / Next)</option>
+            <option value="all">All Feedings Expanded</option>
+          </select>
+        </div>
+
+        <div id="afpContent"></div>
+      </div>
     </section>
 
   </main>
@@ -758,6 +878,171 @@
       showView();
     }
     refreshAll();
+  </script>
+
+  <!-- ================================================================
+       SEPARATE SCRIPT FOR BOTTOM ADMIN SURVEY & FEEDING PANEL
+       Change PANEL_ADMIN_PIN below to your own secret PIN before sharing.
+       ================================================================ -->
+  <script>
+    (function () {
+      const PANEL_ADMIN_PIN = "9090"; // <-- Apna secret Admin PIN yahan set karein
+      let panelUnlocked = false;
+      try { panelUnlocked = sessionStorage.getItem("panelAdmin") === "yes"; } catch (e) {}
+
+      const afpIndex = {}; // stores current feeding index per surveyId
+
+      function updatePanelAuthUI() {
+        $("afpLockedView").hidden = panelUnlocked;
+        $("afpUnlockedView").hidden = !panelUnlocked;
+        if (panelUnlocked) renderAdminFeedPanel();
+      }
+
+      $("afpLoginForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        if ($("afpPin").value === PANEL_ADMIN_PIN) {
+          panelUnlocked = true;
+          try { sessionStorage.setItem("panelAdmin", "yes"); } catch (e) {}
+          $("afpPin").value = "";
+          $("afpLoginMsg").textContent = "";
+          updatePanelAuthUI();
+        } else {
+          $("afpLoginMsg").textContent = "Invalid Admin PIN.";
+        }
+      });
+
+      $("afpLogoutBtn").addEventListener("click", () => {
+        panelUnlocked = false;
+        try { sessionStorage.removeItem("panelAdmin"); } catch (e) {}
+        updatePanelAuthUI();
+      });
+
+      function formatAnswer(ans) {
+        if (ans === undefined || ans === null || ans === "" || (Array.isArray(ans) && ans.length === 0)) {
+          return `<span class="hint">(No answer)</span>`;
+        }
+        return esc(Array.isArray(ans) ? ans.join(", ") : ans);
+      }
+
+      function renderFeedingCard(s, r, idx, total) {
+        const who = s.anonymous ? "Anonymous" : (r.name ? esc(r.name) : "(Not provided)");
+        const rows = s.questions.map((q, qi) => `
+          <tr>
+            <td>${qi + 1}</td>
+            <td>${esc(q.text)} ${q.required ? "<span class='error'>*</span>" : ""}</td>
+            <td>${esc(q.type)}</td>
+            <td><strong>${formatAnswer(r.answers ? r.answers[q.id] : "")}</strong></td>
+          </tr>`).join("");
+
+        return `
+          <div class="afp-feeding-card">
+            <div class="afp-feeding-meta">
+              <span><strong>Feeding:</strong> #${idx + 1} of ${total}</span>
+              <span><strong>Submitted:</strong> ${esc(r.time || "-")}</span>
+              <span><strong>Respondent:</strong> ${who}</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Question</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Submitted Answer</th>
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          </div>`;
+      }
+
+      function renderAdminFeedPanel() {
+        if (!panelUnlocked) return;
+
+        // Stats
+        $("afpStats").innerHTML = `
+          <div class="stat"><strong>${surveys.length}</strong>Total Surveys</div>
+          <div class="stat"><strong>${responses.length}</strong>Total Feedings</div>`;
+
+        // Survey filter dropdown
+        const filterEl = $("afpSurveyFilter");
+        const prevVal = filterEl.value || "all";
+        filterEl.innerHTML = `<option value="all">All Surveys (${surveys.length})</option>` +
+          surveys.map(s => `<option value="${s.id}">${esc(s.title)} [${s.status}] (${countResponses(s.id)})</option>`).join("");
+        filterEl.value = (prevVal === "all" || surveys.some(s => s.id === prevVal)) ? prevVal : "all";
+
+        const selectedId = filterEl.value;
+        const mode = $("afpModeSelect").value;
+        const list = selectedId === "all" ? surveys : surveys.filter(s => s.id === selectedId);
+
+        if (list.length === 0) {
+          $("afpContent").innerHTML = `<p class="hint">No surveys created yet.</p>`;
+          return;
+        }
+
+        $("afpContent").innerHTML = list.map((s, sIdx) => {
+          const rs = responses.filter(r => r.surveyId === s.id);
+          let feedHtml = "";
+
+          if (rs.length === 0) {
+            feedHtml = `<p class="hint">No feedings (responses) recorded for this survey yet.</p>`;
+          } else if (mode === "one") {
+            let idx = afpIndex[s.id] || 0;
+            if (idx >= rs.length) idx = rs.length - 1;
+            if (idx < 0) idx = 0;
+            afpIndex[s.id] = idx;
+
+            feedHtml = `
+              <div class="afp-stepper">
+                <button type="button" class="secondary" data-afp-act="prev" data-sid="${s.id}" ${idx === 0 ? "disabled" : ""}>&larr; Prev Feeding</button>
+                <strong>Feeding ${idx + 1} of ${rs.length}</strong>
+                <button type="button" class="secondary" data-afp-act="next" data-sid="${s.id}" ${idx >= rs.length - 1 ? "disabled" : ""}>Next Feeding &rarr;</button>
+              </div>
+              ${renderFeedingCard(s, rs[idx], idx, rs.length)}`;
+          } else {
+            feedHtml = rs.map((r, i) => renderFeedingCard(s, r, i, rs.length)).join("");
+          }
+
+          return `
+            <div class="afp-survey-box">
+              <div class="afp-survey-head">
+                <div>
+                  <h3 style="margin:0;">${sIdx + 1}. ${esc(s.title)} <span class="badge ${s.status}">${s.status}</span></h3>
+                  <p class="hint">${s.desc ? esc(s.desc) : "No description"} | Anonymous: <strong>${s.anonymous ? "Yes" : "No"}</strong> | Questions: <strong>${s.questions.length}</strong></p>
+                </div>
+                <div><strong>${rs.length}</strong> Feeding(s)</div>
+              </div>
+              ${feedHtml}
+            </div>`;
+        }).join("");
+      }
+
+      $("afpSurveyFilter").addEventListener("change", renderAdminFeedPanel);
+      $("afpModeSelect").addEventListener("change", renderAdminFeedPanel);
+
+      $("afpContent").addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-afp-act]");
+        if (!btn) return;
+        const sid = btn.dataset.sid;
+        const act = btn.dataset.afpAct;
+        const rsLen = responses.filter(r => r.surveyId === sid).length;
+        let idx = afpIndex[sid] || 0;
+        if (act === "prev" && idx > 0) idx--;
+        if (act === "next" && idx < rsLen - 1) idx++;
+        afpIndex[sid] = idx;
+        renderAdminFeedPanel();
+      });
+
+      // Keep panel synced whenever main website saves data
+      const origSaveData = window.saveData;
+      window.saveData = function () {
+        origSaveData();
+        if (panelUnlocked) renderAdminFeedPanel();
+      };
+
+      updatePanelAuthUI();
+    })();
   </script>
 </body>
 </html>
