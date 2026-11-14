@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<!-- DOCTYPE tells the browser: this is an HTML5 document -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Public Health Survey Platform - build, publish and analyse community health surveys.">
+  <title>Public Health Survey Platform</title>
+
+  <style>
+    /* ================================================================
+       CSS (kept simple on purpose). Colours are stored once as
+       variables so you can change the whole theme from here.
+       ================================================================ */
+    :root {
+      --green: #0f5c4d;       /* main colour */
+      --green-light: #e3f1ec; /* soft background */
+      --page: #f6f9f7;        /* page background */
+      --text: #1d2b27;
+      --border: #c5d6cf;
+      --red: #b3261e;
+      --amber: #8a5a00;
+    }
+
+    * { box-sizing: border-box; }   /* padding stays inside the width */
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--page);
+      color: var(--text);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    /* ---------- header and navigation ---------- */
+    header {
+      background: var(--green);
+      color: white;
+      padding: 16px 24px;
+    }
+    header h1 { margin: 0; font-size: 1.6rem; }
+    header p  { margin: 4px 0 12px; opacity: 0.9; }
+
+    nav ul {
+      list-style: none;       /* remove bullets */
+      margin: 0;
+      padding: 0;
+      display: flex;          /* put links in one row */
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    nav a {
+      display: block;
+      color: white;
+      text-decoration: none;
+      padding: 6px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 4px;
+    }
+    nav a:hover, nav a:focus { background: white; color: var(--green); }
+
+    /* ---------- login box inside the header ---------- */
+    #roleForm {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+    #roleForm input { width: 90px; }
+
+    /* ---------- main content ---------- */
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    section {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+    h2 { color: var(--green); margin-top: 0; }
+    h3 { margin-bottom: 6px; }
+
+    /* ---------- forms ---------- */
+    fieldset {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin: 0 0 14px;
+      padding: 10px 14px;
+    }
+    legend { font-weight: bold; padding: 0 6px; }
+    label { display: block; margin: 8px 0 3px; font-weight: bold; }
+    label.inline { display: inline; font-weight: normal; margin-right: 12px; }
+
+    input[type="text"], input[type="number"], input[type="password"],
+    select, textarea {
+      width: 100%;
+      padding: 7px;
+      border: 1px solid #8aa59b;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    #roleForm input, #roleForm select { width: auto; }
+
+    button {
+      background: var(--green);
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      margin: 2px 2px 2px 0;
+    }
+    button:hover { background: #0a4439; }
+    button.secondary { background: white; color: var(--green); border: 1px solid var(--green); }
+    button.danger { background: var(--red); }
+
+    :focus-visible { outline: 3px solid #f2b705; outline-offset: 2px; }
+
+    .hint { font-size: 0.85rem; color: #55675f; margin: 2px 0 0; }
+    .error { color: var(--red); font-weight: bold; }
+    .success { color: var(--green); font-weight: bold; }
+
+    /* ---------- tables ---------- */
+    .table-wrap { overflow-x: auto; }   /* scroll sideways on small phones */
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid var(--border); padding: 8px; text-align: left; vertical-align: top; }
+    th { background: var(--green-light); }
+
+    .badge { padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; }
+    .draft     { background: #fff3cd; color: var(--amber); }
+    .published { background: #d4edda; color: #155724; }
+    .closed    { background: #e2e3e5; color: #41464b; }
+
+    /* ---------- survey question cards ---------- */
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      background: #fcfefd;
+    }
+
+    /* ---------- bar chart made with two divs ---------- */
+    .bar-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; flex-wrap: wrap; }
+    .bar-row span.name { width: 160px; }
+    .bar { flex: 1; min-width: 120px; height: 18px; background: var(--green-light); border-radius: 4px; }
+    .fill { height: 100%; background: var(--green); border-radius: 4px; }
+
+    .stats { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+    .stat { background: var(--green-light); padding: 10px 16px; border-radius: 6px; }
+    .stat strong { display: block; font-size: 1.5rem; color: var(--green); }
+
+    footer {
+      text-align: center;
+      padding: 16px;
+      font-size: 0.85rem;
+      color: #55675f;
+    }
+
+    @media print { header, nav, footer, button { display: none; } }
+  </style>
+</head>
+
+<body>
+
+  <!-- ===================== HEADER + NAVIGATION ===================== -->
+  <header>
+    <h1>Public Health Survey Platform</h1>
+    <p>Collect community health awareness and behaviour data, safely.</p>
+
+    <!-- nav = main menu links. Each link jumps to a <section> by its id -->
+    <nav>
+      <ul>
+        <li><a href="#home">Surveys</a></li>
+        <li class="admin-only"><a href="#builder">Survey builder</a></li>
+        <li><a href="#respond">Take a survey</a></li>
+        <li class="admin-only"><a href="#dashboard">Dashboard</a></li>
+        <li><a href="#privacy">Privacy</a></li>
+      </ul>
+    </nav>
+
+    <!-- Access control: role login -->
+    <form id="roleForm">
+      <label class="inline" for="pin">Staff login (PIN):</label>
+      <input type="password" id="pin" placeholder="PIN" autocomplete="off">
+      <button type="submit" id="loginBtn" class="secondary">Login as admin</button>
+      <button type="button" id="logoutBtn" class="secondary" hidden>Logout</button>
+      <span id="roleMsg">You are viewing as: Respondent</span>
+    </form>
+  </header>
+
+  <main>
+
+    <!-- ===================== HOME: LIST OF SURVEYS ===================== -->
+    <section id="home" class="view">
+      <h2>Surveys</h2>
+      <p id="homeIntro">Choose a published survey and share your answers. Anonymous surveys never store your name.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Title</th>
+              <th scope="col">Status</th>
+              <th scope="col">Anonymous</th>
+              <th scope="col">Responses</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="surveyTable"></tbody>
+        </table>
+      </div>
+
+      <p class="admin-only">
+        <button type="button" id="sampleBtn" class="secondary">Load sample survey + data</button>
+        <button type="button" id="clearBtn" class="danger">Delete all data</button>
+      </p>
+    </section>
+
+    <!-- ===================== SURVEY BUILDER (admin only) ===================== -->
+    <section id="builder" class="view" data-admin="true" hidden>
+      <h2>Survey builder</h2>
+
+      <form id="surveyForm" novalidate>
+        <fieldset>
+          <legend>1. Survey details</legend>
+          <label for="sTitle">Survey title</label>
+          <input type="text" id="sTitle" maxlength="80" placeholder="e.g. Community Hygiene Awareness">
+
+          <label for="sDesc">Short description</label>
+          <textarea id="sDesc" rows="2" maxlength="200"></textarea>
+
+          <p>
+            <input type="checkbox" id="sAnon" checked>
+            <label class="inline" for="sAnon">Anonymous survey (do not store respondent names)</label>
+          </p>
+        </fieldset>
+
+        <fieldset>
+          <legend>2. Add a question</legend>
+          <label for="qText">Question text</label>
+          <input type="text" id="qText" maxlength="150">
+
+          <label for="qType">Question type</label>
+          <select id="qType">
+            <option value="text">Short text</option>
+            <option value="number">Number</option>
+            <option value="choice">Single choice (radio buttons)</option>
+            <option value="multi">Multiple choice (checkboxes)</option>
+            <option value="rating">Rating 1 to 5</option>
+            <option value="yesno">Yes / No</option>
+          </select>
+
+          <label for="qOptions">Options (only for choice questions, separate with commas)</label>
+          <input type="text" id="qOptions" placeholder="Doctor, Internet, Family">
+
+          <p>
+            <input type="checkbox" id="qReq" checked>
+            <label class="inline" for="qReq">Answer is required</label>
+          </p>
+          <button type="button" id="addQBtn">Add question</button>
+          <p id="builderMsg" class="error"></p>
+        </fieldset>
+
+        <fieldset>
+          <legend>3. Questions in this survey</legend>
+          <ol id="draftList"></ol>
+          <p class="hint" id="draftEmpty">No questions added yet.</p>
+        </fieldset>
+
+        <button type="submit">Save survey as draft</button>
+      </form>
+    </section>
+
+    <!-- ===================== TAKE A SURVEY ===================== -->
+    <section id="respond" class="view" hidden>
+      <h2>Take a survey</h2>
+
+      <label for="respondSelect">Select a published survey</label>
+      <select id="respondSelect"></select>
+
+      <form id="respondForm" novalidate>
+        <h3 id="respTitle"></h3>
+        <p id="respDesc"></p>
+        <p id="respPrivacy" class="hint"></p>
+
+        <div id="nameBox" hidden>
+          <label for="respName">Your name</label>
+          <input type="text" id="respName" maxlength="50">
+        </div>
+
+        <div id="questionArea"></div>
+
+        <button type="submit" id="submitBtn">Submit answers</button>
+        <p id="respondMsg"></p>
+      </form>
+    </section>
+
+    <!-- ===================== DASHBOARD (admin only) ===================== -->
+    <section id="dashboard" class="view" data-admin="true" hidden>
+      <h2>Response dashboard</h2>
+
+      <label for="dashSelect">Select a survey</label>
+      <select id="dashSelect"></select>
+
+      <div id="dashBody"></div>
+    </section>
+
+    <!-- ===================== ACCESS DENIED ===================== -->
+    <section id="denied" class="view" hidden>
+      <h2>Access denied</h2>
+      <p class="error">This page is only for health staff. Enter the staff PIN in the header to continue.</p>
+    </section>
+
+    <!-- ===================== PRIVACY (aside = side information) ===================== -->
+    <section id="privacy" class="view">
+      <h2>Privacy controls in this platform</h2>
+      <ul>
+        <li>Anonymous surveys store <strong>no name</strong> and no personal details.</li>
+        <li>Respondents can only see published surveys, never results.</li>
+        <li>Results are hidden until at least <strong>3 responses</strong> exist, so one person cannot be identified.</li>
+        <li>Dashboard, builder and export are available only to logged-in staff.</li>
+        <li>All data stays in this browser (localStorage). Nothing is sent to a server.</li>
+      </ul>
+      <h3>Demo staff PIN (for project evaluation)</h3>
+      <p>The PIN is <strong>1234</strong>.</p>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Public Health Survey Platform &copy; 2026 | B.Tech 1st semester project</p>
+  </footer>
+
+  <script>
+    /* ================================================================
+       JAVASCRIPT - makes the page work.
+       Data is saved in localStorage (the browser's small storage).
+       ================================================================ */
+    const ADMIN_PIN = "1234";
+    const MIN_RESPONSES = 3;      // privacy rule
+
+    // try/catch = if the browser blocks storage, the page still works
+    function load(key) {
+      try { return JSON.parse(localStorage.getItem(key) || "[]"); }
+      catch (e) { return []; }
+    }
+    let surveys   = load("surveys");
+    let responses = load("responses");
+    let isAdmin   = false;
+    try { isAdmin = sessionStorage.getItem("admin") === "yes"; } catch (e) { }
+    let draft     = [];            // questions of the survey being built
+
+    const $ = (id) => document.getElementById(id);   // short helper
+
+    function saveData() {
+      try {
+        localStorage.setItem("surveys", JSON.stringify(surveys));
+        localStorage.setItem("responses", JSON.stringify(responses));
+      } catch (e) { }
+    }
+
+    // Stops users from injecting HTML/script through typed text
+    function esc(text) {
+      return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
+    function countResponses(id) {
+      return responses.filter(r => r.surveyId === id).length;
+    }
+
+    /* ---------- ACCESS CONTROL ---------- */
+    $("roleForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      if ($("pin").value === ADMIN_PIN) {
+        isAdmin = true;
+        try { sessionStorage.setItem("admin", "yes"); } catch (e) { }
+        $("pin").value = "";
+      } else {
+        $("roleMsg").textContent = "Wrong PIN. Try again.";
+        return;
+      }
+      refreshAll();
+    });
+
+    $("logoutBtn").addEventListener("click", () => {
+      isAdmin = false;
+      try { sessionStorage.removeItem("admin"); } catch (e) { }
+      location.hash = "#home";
+      refreshAll();
+    });
+
+    function updateRoleUI() {
+      $("roleMsg").textContent = "You are viewing as: " + (isAdmin ? "Admin (health staff)" : "Respondent");
+      $("loginBtn").hidden = isAdmin;
+      $("pin").hidden = isAdmin;
+      $("logoutBtn").hidden = !isAdmin;
+      document.querySelectorAll(".admin-only").forEach(el => { el.hidden = !isAdmin; });
+    }
+
+    /* ---------- SHOW ONE SECTION AT A TIME ---------- */
+    function showView() {
+      let id = location.hash.slice(1) || "home";
+      let sec = document.querySelector('.view[id="' + id + '"]');
+      if (!sec || id === "denied") { sec = $("home"); }
+
+      document.querySelectorAll(".view").forEach(v => { v.hidden = true; });
+      if (sec.dataset.admin === "true" && !isAdmin) {
+        $("denied").hidden = false;           // block respondents
+      } else {
+        sec.hidden = false;
+      }
+    }
+    window.addEventListener("hashchange", showView);
+
+    /* ---------- HOME: survey list + publish/close workflow ---------- */
+    function renderSurveys() {
+      const rows = [];
+      const list = isAdmin ? surveys : surveys.filter(s => s.status === "published");
+
+      list.forEach(s => {
+        let actions = "";
+        if (isAdmin) {
+          if (s.status === "draft")     actions += `<button data-act="publish" data-id="${s.id}">Publish</button>`;
+          if (s.status === "published") actions += `<button data-act="close" data-id="${s.id}">Close</button>`;
+          if (s.status === "closed")    actions += `<button data-act="reopen" data-id="${s.id}" class="secondary">Reopen</button>`;
+          actions += `<button data-act="view" data-id="${s.id}" class="secondary">Results</button>`;
+          actions += `<button data-act="delete" data-id="${s.id}" class="danger">Delete</button>`;
+        } else {
+          actions = `<button data-act="take" data-id="${s.id}">Take survey</button>`;
+        }
+        rows.push(`<tr>
+          <td>${esc(s.title)}</td>
+          <td><span class="badge ${s.status}">${s.status}</span></td>
+          <td>${s.anonymous ? "Yes" : "No"}</td>
+          <td>${isAdmin ? countResponses(s.id) : "-"}</td>
+          <td>${actions}</td></tr>`);
+      });
+
+      $("surveyTable").innerHTML = rows.length ? rows.join("")
+        : `<tr><td colspan="5">No surveys available yet.</td></tr>`;
+    }
+
+    $("surveyTable").addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      const id = btn.dataset.id, act = btn.dataset.act;
+      const s = surveys.find(x => x.id === id);
+
+      if (act === "take") { $("respondSelect").value = id; renderRespondForm(); location.hash = "#respond"; return; }
+      if (!isAdmin) return;                                  // safety check
+      if (act === "publish") s.status = "published";
+      if (act === "close")   s.status = "closed";
+      if (act === "reopen")  s.status = "published";
+      if (act === "delete") {
+        if (!confirm("Delete this survey and its responses?")) return;
+        surveys = surveys.filter(x => x.id !== id);
+        responses = responses.filter(r => r.surveyId !== id);
+      }
+      if (act === "view") { $("dashSelect").value = id; renderDashboard(); location.hash = "#dashboard"; return; }
+      saveData();
+      refreshAll();
+    });
+
+    /* ---------- BUILDER ---------- */
+    $("addQBtn").addEventListener("click", () => {
+      const text = $("qText").value.trim();
+      const type = $("qType").value;
+      const options = $("qOptions").value.split(",").map(o => o.trim()).filter(o => o);
+      const msg = $("builderMsg");
+      msg.textContent = "";
+
+      if (text.length < 5) { msg.textContent = "Question text must have at least 5 characters."; return; }
+      if ((type === "choice" || type === "multi") && options.length < 2) {
+        msg.textContent = "Choice questions need at least 2 options."; return;
+      }
+
+      let finalOptions = [];
+      if (type === "choice" || type === "multi") finalOptions = options;
+      if (type === "yesno")  finalOptions = ["Yes", "No"];
+      if (type === "rating") finalOptions = ["1", "2", "3", "4", "5"];
+
+      draft.push({ id: "q" + Date.now() + draft.length, text, type, options: finalOptions, required: $("qReq").checked });
+      $("qText").value = ""; $("qOptions").value = "";
+      renderDraft();
+    });
+
+    function renderDraft() {
+      $("draftList").innerHTML = draft.map((q, i) =>
+        `<li>${esc(q.text)} <em>(${q.type}${q.required ? ", required" : ""})</em>
+         <button type="button" class="danger" data-i="${i}">Remove</button></li>`).join("");
+      $("draftEmpty").hidden = draft.length > 0;
+    }
+
+    $("draftList").addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      draft.splice(Number(btn.dataset.i), 1);
+      renderDraft();
+    });
+
+    $("surveyForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const title = $("sTitle").value.trim();
+      const msg = $("builderMsg");
+      if (title.length < 5) { msg.textContent = "Survey title must have at least 5 characters."; return; }
+      if (draft.length === 0) { msg.textContent = "Add at least one question."; return; }
+
+      surveys.push({
+        id: "s" + Date.now(), title, desc: $("sDesc").value.trim(),
+        anonymous: $("sAnon").checked, status: "draft", questions: draft
+      });
+      saveData();
+      draft = []; renderDraft();
+      $("sTitle").value = ""; $("sDesc").value = ""; msg.textContent = "";
+      refreshAll();
+      location.hash = "#home";
+    });
+
+    /* ---------- RESPOND ---------- */
+    function renderRespondSelect() {
+      const published = surveys.filter(s => s.status === "published");
+      const old = $("respondSelect").value;
+      $("respondSelect").innerHTML = published.length
+        ? published.map(s => `<option value="${s.id}">${esc(s.title)}</option>`).join("")
+        : `<option value="">No published surveys</option>`;
+      if (published.some(s => s.id === old)) $("respondSelect").value = old;
+      renderRespondForm();
+    }
+
+    function renderRespondForm() {
+      const s = surveys.find(x => x.id === $("respondSelect").value && x.status === "published");
+      $("respondForm").hidden = !s;
+      $("respondMsg").textContent = "";
+      if (!s) return;
+
+      $("respTitle").textContent = s.title;
+      $("respDesc").textContent = s.desc;
+      $("respPrivacy").textContent = s.anonymous
+        ? "This survey is anonymous. Your name is not collected."
+        : "This survey collects your name. Only health staff can see it.";
+      $("nameBox").hidden = s.anonymous;
+
+      $("questionArea").innerHTML = s.questions.map(q => {
+        const name = "q_" + q.id;
+        let input = "";
+        if (q.type === "text")   input = `<input type="text" name="${name}" maxlength="300">`;
+        if (q.type === "number") input = `<input type="number" name="${name}" min="0" max="1000">`;
+        if (q.type === "choice" || q.type === "yesno" || q.type === "rating")
+          input = q.options.map(o => `<label class="inline"><input type="radio" name="${name}" value="${esc(o)}"> ${esc(o)}</label>`).join("");
+        if (q.type === "multi")
+          input = q.options.map(o => `<label class="inline"><input type="checkbox" name="${name}" value="${esc(o)}"> ${esc(o)}</label>`).join("");
+        return `<div class="card">
+          <h3>${esc(q.text)} ${q.required ? "<span class='error'>*</span>" : ""}</h3>
+          ${input}
+          <p class="error" id="err_${q.id}"></p>
+        </div>`;
+      }).join("");
+    }
+    $("respondSelect").addEventListener("change", renderRespondForm);
+
+    function readAnswer(q) {
+      const form = $("respondForm"), name = "q_" + q.id;
+      if (q.type === "text" || q.type === "number") return form.elements[name].value.trim();
+      if (q.type === "multi")
+        return [...form.querySelectorAll('input[name="' + name + '"]:checked')].map(i => i.value);
+      const c = form.querySelector('input[name="' + name + '"]:checked');
+      return c ? c.value : "";
+    }
+
+    $("respondForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const s = surveys.find(x => x.id === $("respondSelect").value);
+      if (!s || s.status !== "published") { $("respondMsg").textContent = "This survey is closed."; return; }
+
+      let ok = true;
+      const answers = {};
+
+      s.questions.forEach(q => {
+        const a = readAnswer(q);
+        let error = "";
+        const empty = (a === "" || (Array.isArray(a) && a.length === 0));
+
+        if (q.required && empty) error = "This question is required.";
+        else if (!empty && q.type === "text" && a.length < 3) error = "Write at least 3 characters.";
+        else if (!empty && q.type === "number" && (isNaN(a) || Number(a) < 0 || Number(a) > 1000))
+          error = "Enter a number between 0 and 1000.";
+
+        $("err_" + q.id).textContent = error;
+        if (error) ok = false;
+        answers[q.id] = a;
+      });
+
+      let name = "";
+      if (!s.anonymous) {
+        name = $("respName").value.trim();
+        if (name.length < 2) { ok = false; $("respondMsg").className = "error"; $("respondMsg").textContent = "Please enter your name."; return; }
+      }
+      if (!ok) { $("respondMsg").className = "error"; $("respondMsg").textContent = "Please fix the errors shown above."; return; }
+
+      responses.push({ surveyId: s.id, time: new Date().toLocaleString(), name, answers });
+      saveData();
+      $("respondForm").reset();
+      renderRespondForm();
+      $("respondMsg").className = "success";
+      $("respondMsg").textContent = "Thank you! Your response has been recorded.";
+      renderSurveys();
+    });
+
+    /* ---------- DASHBOARD ---------- */
+    function renderDashSelect() {
+      const old = $("dashSelect").value;
+      $("dashSelect").innerHTML = surveys.length
+        ? surveys.map(s => `<option value="${s.id}">${esc(s.title)} (${s.status})</option>`).join("")
+        : `<option value="">No surveys</option>`;
+      if (surveys.some(s => s.id === old)) $("dashSelect").value = old;
+      renderDashboard();
+    }
+
+    function barRow(label, count, total) {
+      const pct = total ? Math.round(count * 100 / total) : 0;
+      return `<div class="bar-row"><span class="name">${esc(label)}</span>
+        <div class="bar"><div class="fill" style="width:${pct}%"></div></div><span>${count} (${pct}%)</span></div>`;
+    }
+
+    function renderDashboard() {
+      const s = surveys.find(x => x.id === $("dashSelect").value);
+      const body = $("dashBody");
+      if (!s) { body.innerHTML = "<p>Create a survey first.</p>"; return; }
+
+      const rs = responses.filter(r => r.surveyId === s.id);
+      let html = `<div class="stats">
+        <div class="stat"><strong>${rs.length}</strong>Responses</div>
+        <div class="stat"><strong>${s.questions.length}</strong>Questions</div>
+        <div class="stat"><strong>${s.status}</strong>Status</div></div>`;
+
+      if (rs.length < MIN_RESPONSES) {
+        html += `<p class="error">Privacy rule: results stay hidden until at least ${MIN_RESPONSES} responses are collected.</p>`;
+        body.innerHTML = html; return;
+      }
+
+      html += `<p><button type="button" id="csvBtn">Export CSV</button>
+               <button type="button" id="printBtn" class="secondary">Print summary</button></p>`;
+
+      s.questions.forEach(q => {
+        const list = rs.map(r => r.answers[q.id])
+          .filter(a => a !== undefined && a !== "" && !(Array.isArray(a) && a.length === 0));
+        html += `<div class="card"><h3>${esc(q.text)}</h3><p class="hint">${list.length} answered</p><div>`;
+
+        if (["choice", "yesno", "rating", "multi"].includes(q.type)) {
+          q.options.forEach(o => {
+            const c = list.filter(a => Array.isArray(a) ? a.includes(o) : a === o).length;
+            html += barRow(o, c, list.length);
+          });
+          if (q.type === "rating") {
+            const avg = list.reduce((t, a) => t + Number(a), 0) / list.length;
+            html += `<p>Average rating: <strong>${avg.toFixed(2)}</strong> / 5</p>`;
+          }
+        } else if (q.type === "number") {
+          const nums = list.map(Number);
+          const avg = nums.reduce((t, n) => t + n, 0) / nums.length;
+          html += `<p>Average: <strong>${avg.toFixed(1)}</strong> | Min: <strong>${Math.min(...nums)}</strong> | Max: <strong>${Math.max(...nums)}</strong></p>`;
+        } else {
+          html += `<ul>${list.map(a => `<li>${esc(a)}</li>`).join("")}</ul>`;
+        }
+        html += `</div></div>`;
+      });
+
+      body.innerHTML = html;
+      $("csvBtn").addEventListener("click", () => exportCSV(s));
+      $("printBtn").addEventListener("click", () => window.print());
+    }
+    $("dashSelect").addEventListener("change", renderDashboard);
+
+    /* ---------- EXPORT ---------- */
+    function exportCSV(s) {
+      const rs = responses.filter(r => r.surveyId === s.id);
+      const cell = (v) => '"' + String(v).replace(/"/g, '""') + '"';
+      const header = ["Submitted"];
+      if (!s.anonymous) header.push("Name");
+      s.questions.forEach(q => header.push(q.text));
+
+      const lines = [header.map(cell).join(",")];
+      rs.forEach(r => {
+        const row = [r.time];
+        if (!s.anonymous) row.push(r.name);
+        s.questions.forEach(q => {
+          const a = r.answers[q.id];
+          row.push(Array.isArray(a) ? a.join("; ") : (a === undefined ? "" : a));
+        });
+        lines.push(row.map(cell).join(","));
+      });
+
+      const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = s.title.replace(/\W+/g, "_") + ".csv";
+      link.click();
+    }
+
+    /* ---------- SAMPLE DATA + CLEAR ---------- */
+    $("sampleBtn").addEventListener("click", () => {
+      if (surveys.some(s => s.id === "sample1")) { alert("Sample survey already loaded."); return; }
+      const q = (id, text, type, options, required) => ({ id, text, type, options, required });
+      surveys.push({
+        id: "sample1", title: "Community Health Awareness 2026",
+        desc: "Tell us about your health habits and where you get health information.",
+        anonymous: true, status: "published",
+        questions: [
+          q("a1", "What is your age?", "number", [], true),
+          q("a2", "Do you wash your hands before meals?", "yesno", ["Yes", "No"], true),
+          q("a3", "Main source of health information?", "choice", ["Doctor", "Internet", "Family", "TV / Radio"], true),
+          q("a4", "Which preventive measures do you follow?", "multi", ["Vaccination", "Masks", "Exercise", "Balanced diet"], false),
+          q("a5", "Rate your awareness of local health services", "rating", ["1", "2", "3", "4", "5"], true),
+          q("a6", "Any suggestions for health workers?", "text", [], false)
+        ]
+      });
+      const src = ["Doctor", "Internet", "Family", "TV / Radio"];
+      const prev = ["Vaccination", "Masks", "Exercise", "Balanced diet"];
+      const tips = ["More camps in villages", "Free check-ups", "Awareness posters", "Night clinics"];
+      for (let i = 0; i < 12; i++) {
+        responses.push({
+          surveyId: "sample1", time: new Date().toLocaleString(), name: "",
+          answers: {
+            a1: String(18 + (i * 7) % 50),
+            a2: i % 4 === 0 ? "No" : "Yes",
+            a3: src[i % 4],
+            a4: [prev[i % 4], prev[(i + 1) % 4]].slice(0, 1 + (i % 2)),
+            a5: String(1 + (i * 3) % 5),
+            a6: i % 3 === 0 ? tips[i % 4] : ""
+          }
+        });
+      }
+      saveData(); refreshAll();
+    });
+
+    $("clearBtn").addEventListener("click", () => {
+      if (!confirm("Delete ALL surveys and responses?")) return;
+      surveys = []; responses = [];
+      saveData(); refreshAll();
+    });
+
+    /* ---------- START ---------- */
+    function refreshAll() {
+      updateRoleUI();
+      renderSurveys();
+      renderRespondSelect();
+      renderDashSelect();
+      renderDraft();
+      showView();
+    }
+    refreshAll();
+  </script>
+</body>
+</html>
